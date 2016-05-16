@@ -1,10 +1,11 @@
 #!/bin/bash
-## 3/4/16
+## 5/16/16
 ## Amy Olex
 ## commands used to run samtools mpileup and bcftools to call snps
 ## This script was developed using the data in ../../PREPROCESSING/gatk_processed_chr22/ and the script call_snps in the same location.
+## I've just taken that script and added in some functionalities, like the possibility for a regions file and inputing the location of the reference file, plus inputing an output directory.
 ##
-## Note, run in the same directory as the files to be processed
+## Note, run this in the same directory as the files to be processed
 ##
 #### USING SAMTOOLS v0.18
 ####
@@ -15,10 +16,13 @@
 #	-q 20	sets min mapping quality to 20 for SNP calling
 #	-S	include the strand bias pvalue
 
+# if you don't have a regions file, for now just enter in NA
+
 infile=$1
 regions=$2
-jobs=$3
+ref=$3
 outdir=$4
+jobs=$5
 
 function maxjobs {
 	while [ `jobs | wc -l` -ge $1 ] 
@@ -33,6 +37,9 @@ cat $infile | while read file
 do
 	maxjobs $jobs
 	base=`basename $file .bam`
-	#samtools mpileup -g -l $regions -f /data/refGenomes/human/hg19/hg19.fa -u -C 50 -q 20 -S $file | bcftools view -vcg - > $outdir/$base.raw.vcf &
-	samtools mpileup -g -f /data/refGenomes/human/hg19/hg19.fa -u -C 50 -q 20 -S $file | bcftools view -vcg - > $outdir/$base.raw.vcf &
+	if [ "$regions" == "NA" ]; then
+		samtools mpileup -g -f $ref -u -C 50 -q 20 -S $file | bcftools view -vcg - > $outdir/$base.raw.vcf &
+	else
+		samtools mpileup -g -l $regions -f $ref -u -C 50 -q 20 -S $file | bcftools view -vcg - > $outdir/$base.raw.vcf &
+	fi
 done

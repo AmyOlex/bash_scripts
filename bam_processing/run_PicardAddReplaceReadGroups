@@ -1,0 +1,18 @@
+#!/bin/bash
+#Amy Olex
+#5/16/16
+#Original script was designed to replace the read groups in MERGED files to make them the same so mpileup calls SNPs using the full file and not just for each individual sample.
+# This newer version will do the same.  Essentially replacing all read groups in a file with the exact same designation.
+# The issue with this is that you can't seperate the read batches afterwards.  Thus, the read groups need to be assigned correctly in the first place...something I didn't do right with this data.
+# However, I'm providing this hack because with variant calling it didn't make any difference.
+# INPUT is a map file with 2 columns: filename readGroupID
+
+#/opt/picard-tools-1.136/picard.jar
+
+infile=$1
+
+cat $infile | while read file id
+do
+	base=`basename $file .bam`
+	java -jar /opt/picard-tools-1.136/picard.jar AddOrReplaceReadGroups I=$file O=$file.fixed.bam RGID=1 RGLB=lib1 RGPL=illumina RGPU=unit1 RGSM=$id 
+done

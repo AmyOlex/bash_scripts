@@ -1,0 +1,23 @@
+#!/bin/bash
+
+## 12/7/15
+## Amy Olex
+## Script restarts the gtdownload if it exited with a code of 214.
+
+exit_code=1
+i=1
+while [ $exit_code -ne 0 ]
+do
+	~/bin/cghub/bin/gtdownload -vv -t -c /var/bioinformatics-tcga-projects/alolex/clients/AFaber/cghub.key -d LUAD_WXS_tumor_628_under9GB_Manifest.xml -k 5 -r 5
+	exit_code=$?
+
+	if [[ $exit_code -eq 214 ]]
+	then
+	   echo "REACHED EXIT 214...RESTARTING DOWNLOAD NUMBER $i"
+	   i++
+	else
+	   echo "NOT 214, ORIGINAL EXIT CODE IS $exit_code , EXITING..."
+	   exit_code=0
+	fi
+done
+

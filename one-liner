@@ -1,0 +1,8 @@
+#!/bin/bash
+
+#Amy Olex
+#small script to convert input seperated by newlines to a one liner seperated by spaces.
+#need to pipe in the input.
+
+
+cat $* | tr '\n' ',' | sed -e 's/,$//' | sed -e 's/,/ /g'

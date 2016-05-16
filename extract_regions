@@ -1,0 +1,45 @@
+#!/bin/bash
+## 5/16/16
+## Amy Olex
+# script to extract regions from BAM files listed in the input MAPFILE.
+# mapfile input is a map file of the form: directory	filename	otherstuff
+# regionfile input is a file in BED format listing the regions to extract from the BAM file: chr  start  stop
+# jobs input is the number of jobs to run at the same time.
+
+mapfile=$1
+regionfile=$2
+outdir=$3
+jobs=$4
+
+
+function maxjobs {
+	while [ `jobs | wc -l` -ge $1 ] 
+	do
+		sleep 2
+	done
+}
+
+
+
+cat $mapfile | while read dir file otherstuff
+do
+	base=`basename $file .bam`
+	cat $regionfile | while read chr start stop
+	do
+		maxjobs $jobs
+		samtools view -bh $dir/$file $chr:$start-$stop > $outdir/$base.$chr.$start-$stop.bam &	
+	done
+done
+
+ls $outdir/*.bam | while read file
+do
+	base=`basename $file .bam`
+	samtools sort $file -o $file.sorted.bam -O bam &
+done
+
+ls $outdir/*.sorted.bam | while read file
+do
+	base=`basename $file .bam`
+	samtools index $file
+done
+

@@ -1,0 +1,37 @@
+#!/bin/bash
+
+## Amy Olex
+## 1/4/16
+
+## Script that iterates through all the files in the PREPROCESSING/gatk_processing folder with the extension .recal.bam and runs mpileup followed by VarScan2.
+## This saves the results in the PREPROCESSING/gatk_variants folder with the extension .rawVariants.vcf
+
+## USAGE: ./5_varscan
+
+
+MAXJOBS=$1
+TMPDIR="/var/bioinformatics-tcga-projects/alolex/clients/MDozmorov/BRCA_WXS_VCU_Wenhu/scratch"
+OUTDIR="/var/bioinformatics-tcga-projects/alolex/clients/MDozmorov/BRCA_WXS_VCU_Wenhu/PREPROCESSING/gatk_variants"
+
+#### These are not needed for VarScan, I just left them here in case I needed them
+## GATK required files
+## GATK bundle: https://www.broadinstitute.org/gatk/guide/article.php?id=1215
+REF="/data/refGenomes/human/hg19/hg19.fa"
+#KNOWN="/data/refGenomes/gatk_bundle/b37/Mills_and_1000G_gold_standard.indels.b37.sites.vcf.gz"
+#INTERVALS="/data/refGenomes/human/GRCh37-lite/GRCh37-lite.gatk.intervals"
+#INTERVALS="/var/bioinformatics-tcga-projects/alolex/clients/MDozmorov/BRCA_WXS_VCU_Wenhu/NexteraTargetedExome_hg19.intervals"
+#KNOWNSITES="/data/refGenomes/gatk_bundle/b37/dbsnp_138.b37.vcf.gz"
+#COSMIC="/data/refGenomes/gatk_bundle/b37/b37_cosmic_v54_120711.vcf.gz"
+#NORMALS="/data/refGenomes/gatk_bundle/b37/1000G_phase3_v4_20130502.sites.vcf.gz"
+
+#GATK="/opt/GenomeAnalysisTK-3.5/GenomeAnalysisTK.jar"
+
+## Need to execute this from the PREPROCESSING/gatk_processing directory
+cd /var/bioinformatics-tcga-projects/alolex/clients/MDozmorov/BRCA_WXS_VCU_Wenhu/PREPROCESSING/gatk_processing
+
+
+# Building a string for the mpileup input
+
+#inputFiles=`ls 10*val.pe.sam.sort.addgrps.dedup.recal.bam | one-liner`
+
+samtools mpileup -f $REF -b goodRuns.txt | java -jar ~/bin/VarScan.v2.4.1.jar mpileup2snp --output-vcf 1 > goodRuns.vcf

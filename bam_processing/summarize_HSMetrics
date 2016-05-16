@@ -1,0 +1,20 @@
+#!/bin/bash
+
+## 12/14/15
+## Amy Olex
+## Summarizes the HS Metrics Files
+##
+## $infile should be the hs-files-to-summarize.txt
+
+infile=$1
+OUT=$2
+
+first_file=`head $infile -n 1`
+
+tac $first_file | sed '4q;d' > $OUT
+
+cat $infile | while read file
+do
+	values=$file"\t"$(tac $file | egrep -m 1 .)
+	echo -e $values >> $OUT
+done 

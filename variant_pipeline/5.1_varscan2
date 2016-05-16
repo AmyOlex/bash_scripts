@@ -1,0 +1,22 @@
+#!/bin/bash
+
+## Amy Olex
+## 1/28/16
+
+## Script that iterates through all the files listed in the input file and runs mpileup followed by VarScan2.
+## This saves the results in the PREPROCESSING/5_varscan folder
+
+## USAGE: ./5_varscan myfiles.txt
+
+
+TMPDIR="/var/bioinformatics-tcga-projects/alolex/clients/MDozmorov/BRCA_WXS_VCU_Wenhu/scratch"
+OUTDIR="/var/bioinformatics-tcga-projects/alolex/clients/MDozmorov/BRCA_WXS_VCU_Wenhu/PREPROCESSING/5_varscan2"
+
+REF="/data/refGenomes/human/hg19/hg19.fa"
+
+## Need to execute this from the PREPROCESSING directory
+cd /var/bioinformatics-tcga-projects/alolex/clients/MDozmorov/BRCA_WXS_VCU_Wenhu/PREPROCESSING
+
+
+
+samtools mpileup -f $REF -b $1 | java -jar ~/bin/VarScan.v2.4.1.jar mpileup2snp --output-vcf 1 > $1.vcf

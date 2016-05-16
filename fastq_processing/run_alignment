@@ -1,0 +1,59 @@
+#!/bin/bash
+
+## 11/20/15
+## Amy Olex
+## Input is a list of directories and file names that need to be aligned with fq1 first followed by fq2 on the same line. dir, fq1, fq2, runID
+## This script runs bwa7 on the fastq files and saves the resulting SAM file in the ALIGNMENTS folder.
+## ARGS: the only input arguments are the map file needed for processing and the number of processes that are allowed to run at the same time.
+## USAGE: >> ./run_alignment PEfile.txt 2
+
+FILES=$1
+MAXJOBS=$2
+OUTFILE="LOGS/"$(date +%F)"_alignmentLog_"$FILES
+
+function maxjobs {
+	while [ `jobs | wc -l` -ge $1 ] 
+	do
+		sleep 2
+	done
+}
+
+function run_alignments {
+
+	dir=$1
+	file1=$2
+	file2=$3
+	runID=$4
+
+	if [ -d $dir ]
+	then
+		if [ -e $dir/$runID.pe.sam ]
+		then
+			echo "$runID Already Aligned, skipping." >> $OUTFILE
+		else
+			echo "Processing $runID ..."
+			bwa7 mem -t 2 /data/refGenomes/human/hg19/hg19.fa $dir/$file1 $dir/$file2 > ALIGNMENTS/$runID.pe.sam
+		fi
+	else
+		echo "Directory does not exist ... $dir" >> $OUTFILE
+	fi
+}
+
+## Ensure the directory structure is set up
+if [ -d LOGS ]
+then 
+	touch $OUTFILE
+
+	cat $FILES | while read dir file1 file2 runID
+	do
+		maxjobs $MAXJOBS
+		run_alignments $dir $file1 $file2 $runID &
+	done
+
+	echo "Done alignments." >> $OUTFILE
+	echo "Done alignments."
+	
+else
+	echo "Error: LOGS/ does not exist.  Please run the init_directories.make file in this folder."
+fi
+

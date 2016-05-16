@@ -1,0 +1,70 @@
+#!/bin/bash
+
+## Amy Olex
+## 12/16/15
+
+## Script that iterates through all the files in the PREPROCESSING/gatk_variants folder with the extension you pass it and runs the VariantFiltration.
+## This saves the results in the PREPROCESSING/gatk_variants folder with the extension .filtered.EXT (for example .filtered.rawVariants.vcf)
+## NOTE: I think this script just marks the filters, I don't think it actually removes anything.  To remove variants we may need to do additional steps.
+## This script also can run multiple jobs at once. 
+
+## USAGE: ./6_gatk_filterVariants <file extension to process> <num jobs>
+
+## If you want to filter everything and not seperate the SNPs and INDELs then you need to use .rawVariants.vcf as the extension.
+## If you ran the SelectVariants script first and divided the raw file into .rawSNPs.vcf and .rawINDELs.vcf, then you will need to use those extensions instead.
+## Make sure you include the first period . in the extension
+
+EXT=$1
+MAXJOBS=$2
+TMPDIR="/var/bioinformatics-tcga-projects/alolex/clients/MDozmorov/BRCA_WXS_VCU_Wenhu/scratch"
+OUTDIR="/var/bioinformatics-tcga-projects/alolex/clients/MDozmorov/BRCA_WXS_VCU_Wenhu/PREPROCESSING/gatk_variants"
+
+## GATK required files
+REF="/data/refGenomes/human/hg19/hg19.fa"
+KNOWN="/data/refGenomes/gatk_bundle/b37/Mills_and_1000G_gold_standard.indels.b37.sites.vcf"
+INTERVALS="/data/refGenomes/human/GRCh37-lite/GRCh37-lite.gatk.intervals"
+KNOWNSITES="/data/refGenomes/gatk_bundle/b37/dbsnp_138.b37.vcf"
+
+GATK="/opt/GenomeAnalysisTK-3.5/GenomeAnalysisTK.jar"
+
+## Need to execute this from the PREPROCESSING/gatk_processing directory
+cd /var/bioinformatics-tcga-projects/alolex/clients/MDozmorov/BRCA_WXS_VCU_Wenhu/PREPROCESSING/gatk_variants
+
+function maxjobs {
+
+	if [ $# -ne 1 ]
+	then
+		num=1
+	else
+		num=$1
+	fi
+
+	while [ `jobs -r | wc -l` -ge $num ]
+	do
+		sleep 5
+	done
+}
+
+## Process all files with the .rawVariants.vcf
+# java -jar GenomeAnalysisTK.jar \
+#   -T VariantFiltration \
+#   -R reference.fasta \
+#   -o output.vcf \
+#   --variant input.vcf \
+#   --filterExpression "AB < 0.2 || MQ0 > 50" \
+#   --filterName "Nov09filters" \
+#   --mask mask.vcf \
+#   --maskName InDel
+
+ls *$EXT | while read file
+do
+	maxjobs $MAXJOBS
+	filebase=`basename $file $EXT`
+	
+	## NOTE: change the filter as you see fit.  The current filter is what we were using at the start of the year.
+	FILTER="QD < 2.0 || FS > 60.0 || MQ < 40.0 || HaplotypeScore > 13.0 || MappingQualityRankSum < -12.5 || ReadPosRankSum < -8.0"
+	FNAME="Dec15-filter"
+	
+	java -Xmx8g -Djava.io.tmpdir=$TMPDIR -jar $GATK -T VariantFiltration -R $REF -o $OUTDIR/$filebase.filtered$EXT --variant $file --filterExpression $FILTER $filterName $FNAME &
+
+done

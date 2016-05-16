@@ -1,0 +1,19 @@
+## 12/11/15
+## Amy Olex
+## The bash commands I used to merge the HTSeq-count columns into one file
+
+## First cd to the directory that has the files
+## Run the below command to past together all the files in columns
+## The awk command parses out all the data columns from the row-names since the row names are going to be identical for each file.
+
+paste `ls` | awk '{out=$1; for (i=2; i<=NF; i+=2){out=out"\t"$i}; print out }' >> test.txt
+
+## Next I need to the column headers, which is the same order as the `ls` command.
+ls | one-liner | sed -e 's/ /\t/g' > headers.txt
+
+## Now I cat the files together, then I manually edited the file to add a new line inbetween the header and the first line, and to remove the last two file names from the header list.
+cat headers.txt test.txt > test2.txt
+
+nano test2.txt
+
+

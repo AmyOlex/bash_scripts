@@ -1,0 +1,30 @@
+#!/bin/bash
+
+## Amy Olex
+## 12/16/15
+## Simple bash to index a list of BAM files
+
+cd /var/bioinformatics-tcga-projects/alolex/clients/MDozmorov/BRCA_WXS_VCU_Wenhu/PREPROCESSING/gatk_processing
+
+function maxjobs {
+	if [ $# -ne 1 ]
+	then
+		num=1
+	else
+		num=$1
+	fi
+
+	while [ `jobs -r | wc -l` -ge $num ]
+	do
+		sleep 5
+	done
+	
+}
+
+## Index all the bam files that have been recalibrated
+
+ls *.recal.bam | while read file
+do 
+	maxjobs 4
+	java -jar /opt/picard-tools-1.115/BuildBamIndex.jar I=$file &
+done

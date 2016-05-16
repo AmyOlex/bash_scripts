@@ -1,0 +1,73 @@
+#!/bin/bash
+
+## 4/8/15
+## UPDATED 11/20/15: revised to make a little more general and to run in the top level directory instad of the flagstat directory.
+## Amy Olex
+## Written to generate and summarize the results from samtools flagstat program.
+
+
+## Define maxjobs function
+function maxjobs {
+        if [ $# -ne 1 ]
+        then
+                num=1
+        else
+                num=$1
+        fi
+
+        while [ `jobs -r | wc -l` -ge $num ]
+        do
+                sleep 2
+        done
+}
+
+
+# FILE needs to be the mapfile that has the ALIGNMENT or TCGA folder and aligned bam file names in it
+# OUT is the file name for the summary.
+# This script is written to be run in the top level directory.
+#
+# >> ./run_flagstat mapfile.map flagstat-summary-results.txt 3
+
+
+FILE=$1
+OUT=$2
+MAX_JOBS=$3
+
+touch $OUT
+
+PIDS=()
+
+## Parse the in file and run several jobs at once.
+cat $FILE | while read dir bam sum pid
+do
+	tmp=`basename $bam .bam`
+	tmp_out="QC/FLAGSTAT/"$tmp"_flagstat.txt"
+	infile=$dir"/"$bam
+	
+	if [ -e $tmp_out ]
+	then
+		echo "File Exists, skipping..." $tmp_out
+	else	
+		echo "Starting File..." $infile "...Out file is..." $tmp_out
+		maxjobs $MAX_JOBS
+		echo $pid > $tmp_out
+		samtools flagstat $infile >> $tmp_out &
+		PIDS=(${PIDS[@]} $!)
+		#sums=$(tail -n+3 $screen_file | head -n7 | awk -F'\t' '{print $5 + $7 + $9 + $11}'| tr '\n' ',' | sed 's/,/\t/g' | sed 's/\t$//')
+		#echo -e $pid"\t"$dir"\\"$bam"\t"$sums >> $OUT
+	fi
+done
+
+wait ${PIDS[@]}
+
+## Once all flagstat jobs have run, parse the file to get the total number, num paired, num both mapped and num properly mapped.
+echo "Done files, summarizing."
+echo -e "Barcode\tTotal\tDuplicates\tMapped\tPaired in Sequencing\tRead1\tRead2\tProperly Paired\tItself and Mate Mapped\tSingletons\tMate Mapped to Dif Chr\tMate Mapped to Diff Chr (mapQ>=5)" > $OUT
+
+`ls QC/FLAGSTAT/*flagstat.txt > flagstat-files-to-summarize.txt`
+
+cat "flagstat-files-to-summarize.txt" | while read file
+do
+	values=$(cat $file | awk -F' ' '{print $1}' | tr '\n' '\t')
+	echo -e $values >> $OUT
+done 

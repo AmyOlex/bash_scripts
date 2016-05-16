@@ -1,0 +1,52 @@
+#!/bin/bash
+
+## Amy Olex
+## 12/16/15
+
+## Script that itterates through a mapfile with the location of BAM files to run the GATK indel realigner on.
+## This saves the results in the PREPROCESSING/gatk_processing folder.
+## This script also can run multiple jobs at once. 
+
+## USAGE: ./1_gatk_realign <mapfile> <num jobs>
+
+
+
+INFILE=$1
+MAXJOBS=$2
+TMPDIR="/var/bioinformatics-tcga-projects/alolex/clients/MDozmorov/BRCA_WXS_VCU_Wenhu/scratch"
+OUTDIR="/var/bioinformatics-tcga-projects/alolex/clients/MDozmorov/BRCA_WXS_VCU_Wenhu/PREPROCESSING/gatk_processing"
+
+## GATK required files
+REF="/data/refGenomes/human/hg19/hg19.fa"
+KNOWN="/data/refGenomes/gatk_bundle/b37/Mills_and_1000G_gold_standard.indels.b37.sites.vcf"
+INTERVALS="/data/refGenomes/human/GRCh37-lite/GRCh37-lite.gatk.intervals"
+KNOWNSITES="/data/refGenomes/gatk_bundle/b37/dbsnp_138.b37.vcf"
+
+GATK="/opt/GenomeAnalysisTK-3.5/GenomeAnalysisTK.jar"
+
+## Need to execute this from the top level directory
+cd /var/bioinformatics-tcga-projects/alolex/clients/MDozmorov/BRCA_WXS_VCU_Wenhu
+
+function maxjobs {
+
+	if [ $# -ne 1 ]
+	then
+		num=1
+	else
+		num=$1
+	fi
+
+	while [ `jobs -r | wc -l` -ge $num ]
+	do
+		sleep 5
+	done
+}
+
+
+cat $INFILE | while read dir bam
+do
+	maxjobs $MAXJOBS
+	filebase=`basename $bam .bam`
+	java -Xmx8g -Djava.io.tmpdir=$TMPDIR -jar $GATK -I $dir/$bam -R $REF -T IndelRealigner -targetIntervals $INTERVALS -o $OUTDIR/$filebase.realign.bam -known $KNOWN &
+
+done

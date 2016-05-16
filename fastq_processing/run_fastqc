@@ -1,0 +1,30 @@
+#!/bin/bash
+
+## 7/1/15
+## Amy Olex
+## Input is the cohort mapfile containing columns for file folders and file names at least.
+## This script runs the fastqc program on the cohort in the mapfile and outputs the results in the QC/FASTQC directory.
+## This program must be executed in the top level TCGA directory for the specific data being analyzed.
+
+## ARGS: the only input arguments are the map file needed for processing and the number of processes that are allowed to run at the same time.
+## USAGE: >> ./run_fastqc mapfile.map 2
+
+INFILE=$1
+MAXJOBS=$2
+LOGFILE="LOGS/"$(date +%F)"_fastqcLog_"$CHECKSUMS
+
+##Ensure the directory structure is set up
+if [ -d QC/FASTQC ]
+then
+
+	### get names in mapfile into a list seperated by spaces.
+	dir=$(cat $INFILE | awk '{print $1}')
+	file=$(cat $INFILE | awk '{print $2}')
+
+	input=$(paste <(echo "$dir") <(echo "$file") --delimiters '/' | ~/bin/one-liner)
+
+	fastqc -o ./QC/FASTQC/ -f bam -t $MAXJOBS -q -d ~/tmp/scratch/ $input
+else
+	echo "Error: ./QC/FASTQC/ does not exist.  Please run the init_directories.make file in this folder."
+fi
+

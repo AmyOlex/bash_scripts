@@ -1,0 +1,20 @@
+#!/bin/bash
+### 1/12/16
+### Amy Olex
+### commands used for running QC3.pl
+
+#perl ~/bin/QC3/qc3.pl -m b -i MAPFILES/qc3_input_bams.map -o QC/QC3_nexteraTargeted/ -t 4 -r targeted_region_files/nexterarapidcapture_expandedexome_targetedregions.bed -g targeted_region_files/Homo_sapiens.GRCh37.73.gtf -d
+
+#perl ~/bin/QC3/qc3.pl -m b -i MAPFILES/qc3_input_bams.map -o QC/QC3_nexteraFlanking500bp/ -t 4 -r targeted_region_files/nexterarapidcapture_expandedexome_targetedregions_flanking500bp.bed -g targeted_region_files/Homo_sapiens.GRCh37.73.gtf -d
+
+#perl ~/bin/QC3/qc3.pl -m b -i MAPFILES/qc3_input_bams.map -o QC/QC3_nexteraTargetedPlusFlanking500bp/ -t 4 -r targeted_region_files/nexterarapidcapture_expandedexome_targetedregions_PlusFlanking500bp.merged.bed -g targeted_region_files/Homo_sapiens.GRCh37.73.gtf -d
+
+perl ~/bin/QC3/qc3.pl -m b -i MAPFILES/qc3_input_bams.map -o QC/QC3_409genes/ -t 4 -r targeted_region_files/CCP.20131001.designed.noChr.bed -g targeted_region_files/Homo_sapiens.GRCh37.73.gtf -d
+
+CCP.20131001.designed.noChr.bed
+### Run QC3 on VCF file.
+### Must run from main BRCA directory.
+### uses the default consistence calculation AND uses the default GATK filtering measures.
+### Need to see what the default GATK filters are, and change based on Mikhail's research.
+#perl ~/bin/QC3/qc3.pl -m v -i PREPROCESSING/VCU22_processedBAMs_forVarScan2_012816.txt.vcf -o QC/QC3_VCF_annovar -a /data/refGenomes/annovar_DBs/
+

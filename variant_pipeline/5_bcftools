@@ -1,0 +1,38 @@
+#!/bin/bash
+## 3/4/16
+## Amy Olex
+## commands used to run samtools mpileup and bcftools to call snps
+## This script was developed using the data in ../../PREPROCESSING/gatk_processed_chr22/ and the script call_snps in the same location.
+##
+## Note, run in the same directory as the files to be processed
+##
+#### USING SAMTOOLS v0.18
+####
+# Settings:
+#	-f	reference fastq
+#	-u	uncompressed BCF file
+#	-C 50	adjusts mapping quality for reads with lots of mismatches
+#	-q 20	sets min mapping quality to 20 for SNP calling
+#	-S	include the strand bias pvalue
+
+infile=$1
+regions=$2
+jobs=$3
+outdir=$4
+
+function maxjobs {
+	while [ `jobs | wc -l` -ge $1 ] 
+	do
+		sleep 2
+	done
+}
+
+
+
+cat $infile | while read file
+do
+	maxjobs $jobs
+	base=`basename $file .bam`
+	#samtools mpileup -g -l $regions -f /data/refGenomes/human/hg19/hg19.fa -u -C 50 -q 20 -S $file | bcftools view -vcg - > $outdir/$base.raw.vcf &
+	samtools mpileup -g -f /data/refGenomes/human/hg19/hg19.fa -u -C 50 -q 20 -S $file | bcftools view -vcg - > $outdir/$base.raw.vcf &
+done

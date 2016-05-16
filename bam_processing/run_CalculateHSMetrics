@@ -1,0 +1,78 @@
+#!/bin/bash
+
+## 4/8/15
+## UPDATED 11/20/15: Copied from run_flagstat scripts and changed to run PICARD CalculatHSMetrics instead.  revised to make a little more general and to run in the top level directory instad of the flagstat directory.
+## Amy Olex
+## Written to generate and summarize the results from the PICARD CalculateHSMetrics program.
+
+
+## Define maxjobs function
+function maxjobs {
+        if [ $# -ne 1 ]
+        then
+                num=1
+        else
+                num=$1
+        fi
+
+        while [ `jobs -r | wc -l` -ge $num ]
+        do
+                sleep 2
+        done
+}
+
+
+# FILE needs to be the mapfile that has the ALIGNMENT or TCGA folder and aligned bam file names in it
+# OUT is the file name for the summary.
+# This script is written to be run in the top level directory.
+#
+# >> ./run_CalculateHSMetrics mapfile.map HSMetrics-summary-results.txt 3 target.bed /data/refGenomes/human/hg19/hg19.fa
+
+
+FILE=$1
+OUT=$2
+MAX_JOBS=$3
+target=$4
+ref=$5
+
+touch $OUT
+
+PIDS=()
+
+## Parse the in file and run several jobs at once.
+cat $FILE | while read dir bam sum pid
+do
+	tmp_out1="QC/PICARD_HS_2/"$pid"_HSstats.txt"
+	tmp_out2="QC/PICARD_HS_2/"$pid"_HSstats.PerTargetCoverage.txt"
+	infile=$dir"/"$bam
+	
+	if [ -e $tmp_out1 ]
+	then
+		echo "File Exists, skipping..." $tmp_out1
+	else	
+		echo "Starting File..." $infile "...Out file is..." $tmp_out1
+		maxjobs $MAX_JOBS
+		java -Xmx16g -XX:ParallelGCThreads=2 -Djava.io.tmpdir=./scratch -jar /opt/picard-tools-1.115/CalculateHsMetrics.jar INPUT=$infile BAIT_INTERVALS=$target TARGET_INTERVALS=$target OUTPUT=$tmp_out1 PER_TARGET_COVERAGE=$tmp_out2 VALIDATION_STRINGENCY=LENIENT TMP_DIR=./scratch REFERENCE_SEQUENCE=$ref &
+
+		PIDS=(${PIDS[@]} $!)
+		#sums=$(tail -n+3 $screen_file | head -n7 | awk -F'\t' '{print $5 + $7 + $9 + $11}'| tr '\n' ',' | sed 's/,/\t/g' | sed 's/\t$//')
+		#echo -e $pid"\t"$dir"\\"$bam"\t"$sums >> $OUT
+	fi
+done
+
+wait ${PIDS[@]}
+
+## Once all flagstat jobs have run, parse the file to get the total number, num paired, num both mapped and num properly mapped.
+#echo "Done files, summarizing."
+#echo -e "Barcode\tTotal\tDuplicates\tMapped\tPaired in Sequencing\tRead1\tRead2\tProperly Paired\tItself and Mate Mapped\tSingletons\tMate Mapped to Dif Chr\tMate Mapped to Diff Chr (mapQ>=5)" > $OUT
+
+`ls QC/PICARD_HS_2/*HSstats.txt > hs-files-to-summarize.txt`
+first_file=`head hs-files-to-summarize.txt -n 1`
+
+tac $first_file | egrep -m 2 . > $OUT
+
+cat "hs-files-to-summarize.txt" | while read file
+do
+	values=$(tac $file | egrep -m 1 .)
+	echo -e $values >> $OUT
+done 

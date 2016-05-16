@@ -1,0 +1,59 @@
+#!/bin/bash
+
+## Amy Olex
+## 12/16/15
+
+## Script that iterates through all the files in the PREPROCESSING/gatk_variants folder with the extension .rawVariants.vcf and runs the SelectVariants tool.
+## This saves the results in the PREPROCESSING/gatk_variants folder with the extension .rawSNPs.vcf and rawINDELs.vcf
+## This script also can run multiple jobs at once. 
+
+## USAGE: ./6_gatk_selectVariants <num jobs>
+
+## NOTE: You don't have to run this script if you want the SNPs and INDELs to be in the same file.  You can skip this step if you want.
+
+MAXJOBS=$1
+TMPDIR="/var/bioinformatics-tcga-projects/alolex/clients/MDozmorov/BRCA_WXS_VCU_Wenhu/scratch"
+OUTDIR="/var/bioinformatics-tcga-projects/alolex/clients/MDozmorov/BRCA_WXS_VCU_Wenhu/PREPROCESSING/gatk_variants"
+
+## GATK required files
+REF="/data/refGenomes/human/hg19/hg19.fa"
+KNOWN="/data/refGenomes/gatk_bundle/b37/Mills_and_1000G_gold_standard.indels.b37.sites.vcf"
+INTERVALS="/data/refGenomes/human/GRCh37-lite/GRCh37-lite.gatk.intervals"
+KNOWNSITES="/data/refGenomes/gatk_bundle/b37/dbsnp_138.b37.vcf"
+
+GATK="/opt/GenomeAnalysisTK-3.5/GenomeAnalysisTK.jar"
+
+## Need to execute this from the PREPROCESSING/gatk_processing directory
+cd /var/bioinformatics-tcga-projects/alolex/clients/MDozmorov/BRCA_WXS_VCU_Wenhu/PREPROCESSING/gatk_variants
+
+function maxjobs {
+
+	if [ $# -ne 1 ]
+	then
+		num=1
+	else
+		num=$1
+	fi
+
+	while [ `jobs -r | wc -l` -ge $num ]
+	do
+		sleep 5
+	done
+}
+
+## Process all files with the .rawVariants.vcf
+## You can run this script before or after the FilterVariants, it just depends on what you want to do.
+## This and the FilterVariants script should be modified to do things in the order you need them done.
+## See the GATK doc at https://www.broadinstitute.org/gatk/guide/tooldocs/org_broadinstitute_gatk_tools_walkers_variantutils_SelectVariants.php
+
+## Currently I have it filtering out SNPs and INDELs into seperate files, but this may not be what you want it to do.
+## After you run the FilterVariants script to mark the FILTER fields, you may want to run this to remove all variants that do not match the filter.
+
+ls *.rawVariants.vcf | while read file
+do
+	maxjobs $MAXJOBS
+	filebase=`basename $file .rawVariants.vcf`
+	
+	java -Xmx8g -Djava.io.tmpdir=$TMPDIR -jar $GATK -T SelectVariants -R $REF --variant $file -o $filebase.rawSNPs.vcf --selectType SNP &
+	java -Xmx8g -Djava.io.tmpdir=$TMPDIR -jar $GATK -T SelectVariants -R $REF --variant $file -o $filebase.rawINDELs.vcf --selectType INDEL &
+done

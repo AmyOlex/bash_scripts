@@ -1,0 +1,149 @@
+#!/bin/bash
+
+## Amy Olex
+## 12/15/15
+## Script to iterate through a list of BAM files that have been coordinate sorted, have had read groups added and have had duplicates marked,
+## to realign INDELS and recalibrate the read scores using GATK 3.5 software.
+## I also added in the variante calling to this pipeline
+
+##INFILE="bam_list_mapfile.txt"
+TMPDIR="/var/bioinformatics-tcga-projects/alolex/clients/MDozmorov/BRCA_WXS_VCU_Wenhu/scratch"
+##OUTDIR="/home/alolex/data/isilon_tcga/BRCA/WXS/gatk_ready/"
+##BAMDIR="/home/alolex/data/isilon_tcga/BRCA/WXS/"
+##VCFDIR="/home/alolex/data/isilon_tcga/BRCA/WXS/gatk_vcf/"
+
+INFILE=$1
+OUTDIR=$2
+VCFDIR=$3
+
+cat $INFILE | while read dir bam
+do
+   # Get base name of BAM file
+   filebase=`basename $bam .bam`
+
+   ### Run IndelRealigner
+   input=`echo $dir/$bam`
+   output=`echo $OUTDIR$filebase.realign.bam`
+   
+   if [ ! -e $output ];
+   then
+      cmd=`echo "java -Xmx8g -Djava.io.tmpdir=$TMPDIR -jar /opt/GenomeAnalysisTK-3.1/GenomeAnalysisTK.jar -I $input -R /data/refGenomes/human/GRCh37-lite/GRCh37-lite.fa -T IndelRealigner -targetIntervals /data/refGenomes/human/GRCh37-lite/GRCh37-lite.gatk3.intervals -o $output -known /opt/GenomeAnalysisTK-3.1/resources/Mills_and_1000G_gold_standard.indels.b37.sites.vcf"`
+      echo "Executing GATK IndelRealigner ... $cmd"
+#     eval $cmd
+   else
+      echo "File Found, moving to next step : $outfile"
+   fi
+
+   ### Run BaseRecalibrator
+   input=$output
+   output=`echo $OUTDIR$filebase.recaldata.table`
+
+   if [ ! -e $output ];
+   then
+      cmd=`echo "java -Xmx8g -Djava.io.tmpdir=$TMPDIR -jar /opt/GenomeAnalysisTK-3.1/GenomeAnalysisTK.jar -T BaseRecalibrator -R /data/refGenomes/human/GRCh37-lite/GRCh37-lite.fa -I $input -knownSites /opt/GenomeAnalysisTK-3.1/resources/dbsnp_138.b37.vcf -knownSites /opt/GenomeAnalysisTK-3.1/resources/Mills_and_1000G_gold_standard.indels.b37.sites.vcf -o $output"`
+      echo "Executing GATK Base Recalibration ... $cmd"
+#     eval $cmd
+   else
+      echo "File Found, moving to next step : $output"
+   fi
+
+   ### Run PrintReads
+   input_bam=`echo $OUTDIR$filebase.realign.bam`
+   input=$output
+   output=`echo $OUTDIR$filebase.recal.bam`
+
+   if [ ! -e $output ];
+   then
+      cmd=`echo "java -Xmx8g -Djava.io.tmpdir=$TMPDIR -jar /opt/GenomeAnalysisTK-3.1/GenomeAnalysisTK.jar -T PrintReads -R /data/refGenomes/human/GRCh37-lite/GRCh37-lite.fa -I $input_bam -BQSR $input -o $output"`
+      echo "Executing GATK PrintReads ... $cmd"
+#     eval $cmd
+   else
+      echo "File Found, moving to next step : $output"
+   fi
+
+   ### Run HaplotypeCaller
+   input=$output
+   output=`echo $VCFDIR$filebase.rawVariants.vcf`
+
+   if [ ! -e $output ];
+   then
+      cmd=`echo "java -Xmx8g -Djava.io.tmpdir=$TMPDIR -jar /opt/GenomeAnalysisTK-3.1/GenomeAnalysisTK.jar -T HaplotypeCaller -R /data/refGenomes/human/GRCh37-lite/GRCh37-lite.fa -I $input -o $output -ERC NONE -baqGOP 30 -variant_index_type LINEAR -variant_index_parameter 128000 --genotyping_mode DISCOVERY -stand_emit_conf 10 -stand_call_conf 30 -nct 4"`
+      echo "Executing GATK HaplotypeCaller ... $cmd"
+#     eval $cmd
+   else
+      echo "File Found, moving to next step : $output"
+   fi
+
+
+
+                ### Run SelectVariants for SNPs
+                input=$output
+                output=`echo $VCFDIR$filebase.rawSNPS.vcf`
+
+                if [ ! -e $output ];
+                then
+		   cmd=`echo "java -Xmx8g -Djava.io.tmpdir=/home/alolex/tmp/scratch -jar /opt/GenomeAnalysisTK-3.1/GenomeAnalysisTK.jar -T SelectVariants -R /data/refGenomes/human/GRCh37-lite/GRCh37-lite.fa -V $input -selectType SNP -o $output"`
+                   echo "Executing Step 7.1 ... $cmd"
+#                  eval $cmd
+                else
+                   echo "File Found, moving to next step : $output"
+                fi
+
+
+
+                ### Run VariantFiltration for SNPs
+                input=$output
+                output=`echo $VCFDIR$filebase.filteredSNPS.vcf`
+
+                if [ ! -e $output ];
+                then
+		   cmd=`echo "java -Xmx8g -Djava.io.tmpdir=/home/alolex/tmp/scratch -jar /opt/GenomeAnalysisTK-3.1/GenomeAnalysisTK.jar -T VariantFiltration -R /data/refGenomes/human/GRCh37-lite/GRCh37-lite.fa -V $input --filterExpression \"QD < 2.0 || FS > 60.0 || MQ < 40.0 || HaplotypeScore > 13.0 || MappingQualityRankSum < -12.5 || ReadPosRankSum < -8.0\" --filterName \"my_snp_filter\" -o $output"`
+                   echo "Executing Step 7.2 ... $cmd"
+#                  eval $cmd
+                else
+                   echo "File Found, moving to next step : $output"
+                fi
+
+
+                ### Run SelectVariants for INDELSs
+                input=`echo $VCFDIR$filebase.rawVariants.vcf`
+                output=`echo $VCFDIR$filebase.rawINDELS.vcf`
+
+                if [ ! -e $output ];
+                then
+		   cmd=`echo "java -Xmx8g -Djava.io.tmpdir=/home/alolex/tmp/scratch -jar /opt/GenomeAnalysisTK-3.1/GenomeAnalysisTK.jar -T SelectVariants -R /data/refGenomes/human/GRCh37-lite/GRCh37-lite.fa -V $input -selectType INDEL -o $output"`
+                   echo "Executing Step 7.3 ... $cmd"
+#                  eval $cmd
+                else
+                   echo "File Found, moving to next step : $output"
+                fi
+
+
+
+                ### Run VariantFiltration for INDELs
+                input=$output
+                output=`echo $VCFDIR$filebase.filteredINDELS.vcf`
+
+                if [ ! -e $output ];
+                then
+		   cmd=`echo "java -Xmx8g -Djava.io.tmpdir=/home/alolex/tmp/scratch -jar /opt/GenomeAnalysisTK-3.1/GenomeAnalysisTK.jar -T VariantFiltration -R /data/refGenomes/human/GRCh37-lite/GRCh37-lite.fa -V $input --filterExpression \"QD < 2.0 || FS > 200.0 || ReadPosRankSum < -20.0\" --filterName \"my_indel_filter\" -o $output"`
+                   echo "Executing Step 7.4 ... $cmd"
+#                  eval $cmd
+                else
+                   echo "File Found, exiting script : $output"
+                fi
+
+
+
+
+		### Now remove this directory name from the directory list
+		declare -a dirList=( ${dirList[@]/$dir/} )
+		echo "$dir REMOVED from list"
+
+	   else
+		echo "FILE NOT FOUND OR IS OPEN ($procNotOpen = 0)... Skipping $procFile"
+	   fi
+done 
+# done while loop
+	
+

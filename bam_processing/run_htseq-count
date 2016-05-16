@@ -1,0 +1,35 @@
+#!/bin/bash
+
+## 12/10/15
+## Amy Olex
+## Script to run HTSeq-count on a list of BAM files in mapfile format.
+
+## USAGE: run_htseq-count <file.bam> <file.gff> <num threads>
+
+function maxjobs {
+	while [ `jobs | wc -l` -ge $1 ] 
+	do
+		sleep 2
+	done
+}
+
+INFILE=$1
+GFFFILE=$2
+JOBS=$3
+
+PIDS=()
+
+mkdir PREPROCESSING/htseq_counts
+
+cat $INFILE | while read dir bam sum pid
+do
+	maxjobs $JOBS
+	htseq-count -f bam -r pos -s no $dir/$bam $GFFFILE > QC/htseq_counts/$bam.counts & 
+	##htseq-count -f bam -r pos $dir/$bam $GFFFILE > QC/htseq_counts/$bam.stranded.counts &
+	PIDS=(${PIDS[@]} $!)
+done
+
+wait ${PIDS[@]}
+
+
+

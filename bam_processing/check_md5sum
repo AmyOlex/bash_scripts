@@ -1,0 +1,92 @@
+#!/bin/bash
+
+## 11/16/15
+## UPDATED 11/16/15: To run on Mikhail's new VCU WXS files.
+## Amy Olex
+## Input is a list of file names and checksums.
+## This program checks the md5sum of each file and reports if there is a problem.
+## It also keeps track of which files it has checked, so it doesn't check them again.
+## For any files not passing the checksum test, it will mark the file as failed and put it in the failed log
+## The mapfile must also be saved in the same folder.
+
+## ARGS: the only input arguments are the map file needed for processing and the number of processes that are allowed to run at the same time.
+## USAGE: >> ./check_md5sum mapfile.txt 1
+
+CHECKSUMS=$1
+MAXJOBS=$2
+OUTFILE="LOGS/"$(date +%F)"_checksumLog_"$CHECKSUMS
+FAILEDLOG="LOGS/"$(date +%F)"_checksumFailed_"$CHECKSUMS
+FAILED="checksum.failed"
+PASSED="checksum.passed"
+
+function maxjobs {
+	while [ `jobs | wc -l` -ge $1 ] 
+	do
+		sleep 2
+	done
+}
+
+function checksums {
+
+	dir=$1
+	file=$2
+	sum=$3
+	failed=$file"."$FAILED
+	passed=$file"."$PASSED
+
+	if [ -d $dir ]
+	then
+		if [ -e $dir/$failed ]
+		then
+			echo "FAILED: md5 of patient $dir already tested, results in $dir/$FAILED." >> $OUTFILE
+		elif [ -e $dir/$passed ]
+		then
+			echo "PASSED: md5 of patient $dir already tested, results in $dir/$PASSED." >> $OUTFILE
+		else
+			echo "Processing $file ..."
+			prev_sum=$(md5sum $dir/$file | awk '{print $1}')
+			if [ "$sum" != "$prev_sum" ]
+			then
+				echo "FAILED: md5 of patient $dir does not match: cghub:$sum, hershey:$prev_sum" > $dir/$failed
+				#cd ..
+				echo "FAILED: md5 of patient $dir does not match: cghub:$sum, hershey:$prev_sum" >> $OUTFILE
+			else
+				echo "PASSED: md5 of patient $dir matches: cghub:$sum, hershey:$prev_sum" > $dir/$passed
+				#cd ..
+				echo "PASSED: $dir is fine" >> $OUTFILE
+			fi
+		fi
+	else
+		echo "Directory does not exist ... $dir" >> $OUTFILE
+	fi
+}
+
+## Ensure the directory structure is set up
+if [ -d LOGS ]
+then 
+	touch $OUTFILE
+
+	cat $CHECKSUMS | while read dir file sum
+	do
+		maxjobs $MAXJOBS
+		checksums $dir $file $sum &
+	done
+
+	echo "Done checksum check." >> $OUTFILE
+	echo "Done checksum check."
+	
+	touch $FAILEDLOG
+
+	# now that checksum is done for all files, review to see if any failed.
+	cat $CHECKSUMS | while read dir file sum
+	do
+		if [ -e $dir/$FAILED ]
+		then
+			grep $dir $CHECKSUMS >> $FAILEDLOG 
+		fi
+	done 
+
+else
+	echo "Error: LOGS/ does not exist.  Please run the init_directories.make file in this folder."
+fi
+

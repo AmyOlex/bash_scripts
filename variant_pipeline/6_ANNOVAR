@@ -1,0 +1,10 @@
+#!/bin/bash
+
+## Amy Olex
+## 2/8/16
+## Script to run ANNOVAR
+## Must be in same directory as input vcf file
+
+
+table_annovar.pl $1 /data/refGenomes/annovar_DBs/ -buildver hg19 -out $1.annovarRun -remove -protocol avsnp144,dbnsfp30a,dbnsfp31a_interpro,dbscsnv11,esp6500siv2_all,gerp++elem,gwava,hrcr1,nci60,popfreq_all_20150413,clinvar_20150629,cosmic70,refGene,snp138,1000g2015aug_all,1000g2015aug_afr,1000g2015aug_amr,1000g2015aug_eas,1000g2015aug_eur,1000g2015aug_sas -operation f,f,f,f,f,f,f,f,f,f,f,f,g,f,f,f,f,f,f,f -nastring . -vcfinput
+

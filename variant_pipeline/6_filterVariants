@@ -1,0 +1,32 @@
+#!/bin/bash
+## 3/1/16
+## Amy Olex
+## commands used to filter SNPs using vcftools
+##
+####
+# Settings:
+#	--minDP 8 
+#	--minGQ 20 
+#	--hwe 0.05 
+#	--max-missing 1 
+#	--recode
+#	--out <file>.filtered
+infile=$1
+jobs=$2
+
+
+function maxjobs {
+	while [ `jobs | wc -l` -ge $1 ] 
+	do
+		sleep 2
+	done
+}
+
+
+
+cat $infile | while read file
+do
+	maxjobs $jobs
+	base=`basename $file .raw.vcf`
+	vcftools --vcf $file --out $base.filtered --minDP 8 --minGQ 20 --hwe 0.05 --max-missing 1 --recode-INFO-all --recode --remove-indels &
+done

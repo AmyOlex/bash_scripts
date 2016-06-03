@@ -1,0 +1,25 @@
+#!/bin/bash
+## 3/1/16
+## Amy Olex
+## commands used to convert VCF files to table
+##
+####
+infile=$1
+jobs=$2
+
+
+function maxjobs {
+	while [ `jobs | wc -l` -ge $1 ] 
+	do
+		sleep 2
+	done
+}
+
+
+
+cat $infile | while read file
+do
+	maxjobs $jobs
+	base=`basename $file .vcf`
+	java -jar /opt/GenomeAnalysisTK-3.5/GenomeAnalysisTK.jar -R /data/refGenomes/human/hg19/hg19.fa -T VariantsToTable -V $file -o $base.table -F CHROM -F POS -F ID -F REF -F ALT -F QUAL -F FILTER -F DP -F VDB -F AF1 -F AC1 -F DP4 -F MQ -F FQ -GF GT -GF PL -GF DP -GF SP -GF GQ --allowMissingData &
+done

@@ -1,0 +1,17 @@
+#!/bin/bash
+# Amy Olex
+# 3/1/16
+# 
+# Code to calculate some state from vcf table files from input.
+
+infile=$1
+outfile=$2
+
+echo -e "File\tNum SNPs\tMean GQ\n" > $outfile
+cat $infile | while read file
+do
+	num_snps=`wc -l $file | cut -d ' ' -f1`
+	avgGQ=`cat $file | cut -f19 | awk '{ total += $1 } END { print total/NR }'`
+
+	echo -e $file'\t'$num_snps'\t'$avgGQ >> $outfile
+done

@@ -15,8 +15,12 @@
 #	-C 50	adjusts mapping quality for reads with lots of mismatches
 #	-q 20	sets min mapping quality to 20 for SNP calling
 #	-S	include the strand bias pvalue
-
+#
+#### USAGE:
+# >> 5_bcftools infile.txt myRegions.bed myref.fa my/out/dir 2
+#
 # if you don't have a regions file, for now just enter in NA
+# The regions file should be in BED format.
 
 infile=$1
 regions=$2

@@ -5,14 +5,35 @@
 # This newer version will do the same.  Essentially replacing all read groups in a file with the exact same designation.
 # The issue with this is that you can't seperate the read batches afterwards.  Thus, the read groups need to be assigned correctly in the first place...something I didn't do right with this data.
 # However, I'm providing this hack because with variant calling it didn't make any difference.
-# INPUT is a map file with 2 columns: filename readGroupID
 
-#/opt/picard-tools-1.136/picard.jar
+## UPDATE 8.12.16 - changed to be more generic and to correct the read group and sample name information for each file
 
-infile=$1
+## Input is now a tab delimited file with columns: DIRECTORY FILE_NAME RGID RGLB RGPL RGPU RGSM 
+## If you include header lines set the 3rd option to the number of header lines, otherwise enter zero
 
-cat $infile | while read file id
+## USAGE: ./run_PicardAddReplaceReadGroups <input file> <output directory> <#jobs> <#header lines>
+## EXAMPLE: ./run_PicardAddReplaceReadGroups readGroupInfo.txt PREPROCESSING/2_addgrps 5 1
+
+my_file=$1
+outdir=$2
+jobs=$3
+start=$(($4+1))
+
+function maxjobs {
+	while [ `jobs | wc -l` -ge $1 ]
+	do
+		sleep 5
+	done
+}
+
+
+
+tail -n +$start $my_file | while read dir file rgid rglb rgpl rgpu rgsm
 do
-	base=`basename $file .bam`
-	java -jar /opt/picard-tools-1.136/picard.jar AddOrReplaceReadGroups I=$file O=$file.fixed.bam RGID=1 RGLB=lib1 RGPL=illumina RGPU=unit1 RGSM=$id 
+	maxjobs $jobs
+	outbase=`basename $file .bam`
+	java -jar /opt/picard-tools-1.136/picard.jar AddOrReplaceReadGroups I=$dir/$file O=$outdir/$outbase.addgrps.bam RGID=$rgid RGLB=$rglb RGPL=$rgpl RGPU=$rgpu RGSM=$rgsm &
 done
+
+echo "DONE"
+

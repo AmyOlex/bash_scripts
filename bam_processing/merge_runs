@@ -5,13 +5,27 @@
 ## Written to merge BAM files
 
 ## Input is a tab delimited file with FILE1 <tab> FILE2
+##
+## UPDATE 8.12.16: modified to use the newer PICARD version and added usage example and run multiple threads at once.
+##
+## USAGE: >> merge_runs my_file.txt outdir 5
 
 my_file=$1
+outdir=$2
+jobs=$3
+
+function maxjobs {
+	while [ `jobs | wc -l` -ge $1 ]
+	do
+		sleep 5
+	done
+}
 
 cat $my_file | while read file1 file2
 do
+	maxjobs $jobs
 	outbase=`basename $file1 .bam`
-	java -Xmx8g -XX:ParallelGCThreads=2 -Djava.io.tmpdir=/home/alolex/tmp/scratch -jar /opt/picard-tools-1.115/MergeSamFiles.jar INPUT=$file1 INPUT=$file2 OUTPUT=$outbase.MERGED.bam COMMENT="Merging VCU22 run1 files that did not demultiplex properly with the corresponding run2 files."
+	java -jar /opt/picard-tools-1.136/picard.jar MergeSamFiles INPUT=$file1 INPUT=$file2 OUTPUT=$outdir/$outbase.MERGED.bam COMMENT="Merging BAM files listed in $my_file"
 
 done
 

@@ -25,7 +25,7 @@ cat $my_file | while read file1 file2
 do
 	maxjobs $jobs
 	outbase=`basename $file1 .bam`
-	java -jar /opt/picard-tools-1.136/picard.jar MergeSamFiles INPUT=$file1 INPUT=$file2 OUTPUT=$outdir/$outbase.MERGED.bam COMMENT="Merging BAM files listed in $my_file"
+	java -jar /opt/picard-tools-1.136/picard.jar MergeSamFiles INPUT=$file1 INPUT=$file2 OUTPUT=$outdir/$outbase.MERGED.bam COMMENT="Merging BAM files listed in $my_file" &
 
 done
 

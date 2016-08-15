@@ -1,0 +1,33 @@
+#!/bin/bash
+
+## 8.15.16
+## Amy Olex
+## Written to run PICARD Mark Duplicates on each input file.
+
+## Input is a tab delimited file with columns: DIRECTORY FILE_NAME 
+## If you include header lines set the 3rd option to the number of header lines, otherwise enter zero
+
+## USAGE: ./run_PicardMarkDuplicates infile.txt outdir 5 1
+
+my_file=$1
+outdir=$2
+jobs=$3
+start=$(($4+1))
+
+function maxjobs {
+	while [ `jobs | wc -l` -ge $1 ]
+	do
+		sleep 5
+	done
+}
+
+
+
+tail -n +$start $my_file | while read dir file
+do
+	maxjobs $jobs
+	outbase=`basename $file .bam`
+	java -jar /opt/picard-tools-1.136/picard.jar MarkDuplicates I=$dir/$file O=$outdir/$outbase.mkdups.bam METRICS_FILE=metrics STRINGENCY=LENIENT &
+done
+
+echo "DONE"

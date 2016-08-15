@@ -27,7 +27,7 @@ tail -n +$start $my_file | while read dir file
 do
 	maxjobs $jobs
 	outbase=`basename $file .bam`
-	java -jar /opt/picard-tools-1.136/picard.jar MarkDuplicates I=$dir/$file O=$outdir/$outbase.mkdups.bam METRICS_FILE=metrics STRINGENCY=LENIENT &
+	java -jar /opt/picard-tools-1.136/picard.jar MarkDuplicates I=$dir/$file O=$outdir/$outbase.mkdups.bam METRICS_FILE=metrics VALIDATION_STRINGENCY=LENIENT &
 done
 
 echo "DONE"

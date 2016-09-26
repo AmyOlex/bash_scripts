@@ -4,14 +4,24 @@
 # 3/6/15
 # Script that extracts the unmapped reads from each bam file in a TCGA directory.
 # Must input a file with all the directory names followed by file name in each to process.
+#
+# UPDATED 9/26/16: Updated to work with any project and folder configureation (almost--the LOG file must be in the MAIN dorectory and the INFILE must also be in the main directory).
+#
+# USAGE: ./extract_unmapped_reads_gdc <config file>  
+# NOTE: For the MAXJOBS, each job will execute 3 threads, so on Hershey the max I can do is 4 jobs.
 
-MAXJOBS=4
-MAINDIR="/var/tcga/HNSC/WGS"
-INFILE="files_to_process.txt"
-LOGFILE=$MAINDIR/LOGS/log_extract_unmapped_reads_050415.txt
-OUTDIR="/var/tcga/HNSC/WGS/UNMAPPED"
-TMPDIR="/var/tcga/HNSC/WGS/TMP"
-FASTQDIR="/var/tcga/HNSC/WGS/FASTQ"
+## The following settings are in the config file and must be edited for each project.
+#####
+#MAXJOBS=4
+#MAINDIR="/var/tcga/HNSC/WGS"
+#INFILE="files_to_process.txt"
+#LOGFILE=$MAINDIR/LOGS/log_extract_unmapped_reads_050415.txt
+#OUTDIR="/var/tcga/HNSC/WGS/UNMAPPED"
+#TMPDIR="/var/tcga/HNSC/WGS/TMP"
+#FASTQDIR="/var/tcga/HNSC/WGS/FASTQ"
+#####
+
+source $1
 touch $LOGFILE
 
 function maxjobs {

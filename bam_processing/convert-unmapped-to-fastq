@@ -1,0 +1,43 @@
+#!/bin/bash
+
+# Amy Olex
+# 3/11/15
+# Script that takes the unmapped reads and converts them to FASTQ files.
+
+MAXJOBS=4
+MAINDIR="/var/tcga/HNSC/WGS"
+INFILE="unmapped_to_convert.txt"
+LOGFILE=$MAINDIR/LOGS/log_convert_to_fastq_051115.txt
+OUTDIR="/var/tcga/HNSC/WGS/UNMAPPED"
+TMPDIR="/var/tcga/HNSC/WGS/TMP"
+FASTQDIR="/var/tcga/HNSC/WGS/FASTQ"
+touch $LOGFILE
+
+function maxjobs {
+   while [ `jobs | wc -l` -ge $1 ]
+   do
+      sleep 5
+   done
+}
+
+function process_file {
+	file=$1
+
+	echo $file" : Processing `date` ">> $LOGFILE
+	
+	if [ ! -e $FASTQDIR/$file.1.fastq ]
+	then 
+	#	echo $OUTDIR/$file
+		java -Xmx8g -Djava.io.tmpdir=~/tmp/scratch -jar /opt/picard-tools-1.115/SamToFastq.jar I=$OUTDIR/$file F=$FASTQDIR/$file.1.fastq F2=$FASTQDIR/$file.2.fastq VALIDATION_STRINGENCY=LENIENT TMP_DIR=~/tmp/scratch
+	else
+		echo "$FASTQDIR/$file.1.fastq exists ... skipping"
+	fi
+	echo $file" : Finished `date` " >> $LOGFILE
+}
+
+cat $INFILE | while read file
+do
+	maxjobs $MAXJOBS; process_file $file &
+done
+
+echo "Done!" >> $LOGFILE

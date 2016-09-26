@@ -1,0 +1,47 @@
+#!/bin/bash
+
+# Amy Olex
+# 7/9/15
+# Script that extracts the reads that are mapped to human with an unmapped mate from each bam file in a TCGA directory.
+# Must input a file with all the directory names followed by file name in each to process.
+
+MAXJOBS=5
+MAINDIR="/var/tcga/HNSC/WGS"
+INFILE="mapfile_HNSC_WGS_CohortHPVpos.map"
+LOGFILE=$MAINDIR"/LOGS/log_extract_mapped-unmapped_reads.txt"
+OUTDIR=$MAINDIR"/ONE_MAPPED_ONE_UNMAPPED"
+TMPDIR=$MAINDIR"/TMP"
+FASTQDIR=$MAINDIR"/FASTQ"
+touch $LOGFILE
+
+function maxjobs {
+   while [ `jobs | wc -l` -ge $1 ]
+   do
+      sleep 2
+   done
+}
+
+function process_file {
+	dir=$1
+	file=$2
+
+	echo $file" : Processing `date` ">> $LOGFILE
+	outfile=`echo mapped-unmapped_$file`
+	# select all primary mapped reads with mate unmapped
+	samtools view -b -f 8 -F 260 $dir/$file > $TMPDIR/temp1.$file
+	samtools sort -n $TMPDIR/temp1.$file $TMPDIR/temp1-sort.$file
+
+	samtools view -b -f 4 -F 264 $dir/$file > $TMPDIR/temp2.$file
+	samtools sort -n $TMPDIR/temp2.$file $TMPDIR/temp2-sort.$file
+
+	samtools merge -n $OUTDIR/$outfile $TMPDIR/temp1-sort.$file.bam $TMPDIR/temp2-sort.$file.bam
+
+	echo $file" : Finished `date` " >> $LOGFILE
+}
+
+cat $INFILE | while read dir file other
+do
+	maxjobs $MAXJOBS; process_file $dir $file &
+done
+
+echo "Done!" >> $LOGFILE

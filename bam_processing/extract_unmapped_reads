@@ -1,0 +1,136 @@
+#!/bin/bash
+
+# Amy Olex
+# 3/6/15
+# Script that extracts the unmapped reads from each bam file in a TCGA directory.
+# Must input a file with all the directory names followed by file name in each to process.
+
+MAXJOBS=4
+MAINDIR="/var/tcga/HNSC/WGS"
+INFILE="files_to_process.txt"
+LOGFILE=$MAINDIR/LOGS/log_extract_unmapped_reads_050415.txt
+OUTDIR="/var/tcga/HNSC/WGS/UNMAPPED"
+TMPDIR="/var/tcga/HNSC/WGS/TMP"
+FASTQDIR="/var/tcga/HNSC/WGS/FASTQ"
+touch $LOGFILE
+
+function maxjobs {
+   while [ `jobs | wc -l` -ge $1 ]
+   do
+      sleep 20
+   done
+}
+
+function process_file {
+	dir=$1
+	file=$2
+
+	echo $file" : Processing `date` ">> $LOGFILE
+	outfile=`echo unmapped_$file`
+	
+	
+	# unmapped reads whos mate is mapped
+	if [ ! -e $TMPDIR/temp1.$file ]
+	then 
+		samtools view -b -f 4 -F264 $dir/$file > $TMPDIR/temp1.$file &
+		pid1=$!
+	else 
+		echo "$TMPDIR/temp1.$file exists ... skipping"
+		pid1=""
+	fi
+	
+	# mapped reads whoe mate is unmapped
+	if [ ! -e $TMPDIR/temp2.$file ]
+	then 
+		samtools view -b -f 8 -F 260 $dir/$file > $TMPDIR/temp2.$file & 
+		pid2=$!
+	else 
+		echo "$TMPDIR/temp2.$file exists ... skipping"
+		pid2="" 
+	fi
+	
+	# unmapped read whos mate is also unmapped
+	if [ ! -e $TMPDIR/temp3.$file ]
+	then 
+		samtools view -b -f 12 -F 256 $dir/$file > $TMPDIR/temp3.$file &
+		pid3=$!
+	else 
+		echo "$TMPDIR/temp3.$file exists ... skipping"
+		pid3=""
+	fi
+	
+	echo $file" : "$pid1 $pid2 $pid3": waiting on samtools filtering to finish ... `date`" >> $LOGFILE
+	wait $pid1 $pid2 $pid3
+	echo $file" : "$pid1 $pid2 $pid3": all samtools finished, sorting files... `date`" >> $LOGFILE
+	
+	if [ ! -e $TMPDIR/temp1-sort.$file ]
+	then 
+		samtools sort -n $TMPDIR/temp1.$file $TMPDIR/temp1-sort.$file &
+		pid1=$!
+	else 
+		echo "$TMPDIR/temp1-sort.$file exists ... skipping"
+		pid1=""
+	fi
+	
+	if [ ! -e $TMPDIR/temp2-sort.$file ]
+	then 
+		samtools sort -n $TMPDIR/temp2.$file $TMPDIR/temp2-sort.$file &
+		pid2=$!
+	else 
+		echo "$TMPDIR/temp1-sort.$file exists ... skipping"
+		pid2=""
+	fi
+	
+	if [ ! -e $TMPDIR/temp3-sort.$file ]
+	then 
+		samtools sort -n $TMPDIR/temp3.$file $TMPDIR/temp3-sort.$file &
+		pid3=$!
+	else 
+		echo "$TMPDIR/temp1-sort.$file exists ... skipping"
+		pid3=""
+	fi
+	
+
+        echo $file" : "$pid1 $pid2 $pid3": waiting on samtools sorting to finish for ... `date`"  >> $LOGFILE
+        wait $pid1 $pid2 $pid3
+        echo $file" : "$pid1 $pid2 $pid3": sorting done, merging files... `date`"  >> $LOGFILE
+
+	if [ ! -e $OUTDIR/$outfile ]
+	then 
+		samtools merge -n $OUTDIR/$outfile $TMPDIR/temp1-sort.$file.bam $TMPDIR/temp2-sort.$file.bam $TMPDIR/temp3-sort.$file.bam
+		pid4=$!
+	else 
+		echo "$OUTDIR/$outfile exists ... skipping"
+		pid4=""
+	fi
+	#samtools merge -n $TMPDIR/temp-merged.$file.bam $TMPDIR/temp1-sort.$file.bam $TMPDIR/temp2-sort.$file.bam $TMPDIR/temp3-sort.$file.bam
+	
+
+	echo $file" : "$pid4": waiting on samtools merge to finish ... `date`"  >> $LOGFILE
+	wait $pid4
+	#echo $file" : "$pid4" : merging done, resorting ... `date`"  >> $LOGFILE
+	
+	#samtools sort -n $TMPDIR/temp-merged.$file.bam $OUTDIR/$outfile 
+	#pid5=$!
+	
+        #echo $file" : "$pid5": waiting on samtools sorting of merged file to finish ... `date`"  >> $LOGFILE
+        #wait $pid5
+        echo $file" : "$pid4" : merging done, converting to fastq ... `date`"  >> $LOGFILE	
+
+	#~/bin/bedtools2/bin/bamToFastq -i $OUTDIR/$outfile -fq $FASTQDIR/$file.fastq
+	#~/bin/bedtools2/bin/bamToFastq -i $OUTDIR/$outfile -fq $FASTQDIR/$file.1.fastq -fq2 $FASTQDIR/$file.2.fastq
+	if [ ! -e $FASTQDIR/$file.1.fastq ]
+	then 
+		java -Xmx8g -Djava.io.tmpdir=~/tmp/scratch -jar /opt/picard-tools-1.115/SamToFastq.jar I=$OUTDIR/$outfile F=$FASTQDIR/$file.1.fastq F2=$FASTQDIR/$file.2.fastq VALIDATION_STRINGENCY=LENIENT TMP_DIR=~/tmp/scratch
+	else
+		echo "$FASTQDIR/$file.1.fastq exists ... skipping"
+	fi
+	echo $file" : Finished `date` " >> $LOGFILE
+}
+
+cat $INFILE | while read dir file
+do
+	maxjobs $MAXJOBS; process_file $dir $file &
+done
+
+echo "Done!" >> $LOGFILE

@@ -1,0 +1,46 @@
+#!/bin/bash
+
+## 4/8/15
+## UPDATED 11/20/15: Copied from run_flagstat scripts and changed to run PICARD CalculatHSMetrics instead.  revised to make a little more general and to run in the top level directory instad of the flagstat directory.
+## UPDATED 9/27/16: Copied from CalculateHSMetrics to run the PICARD CollectInsertSizeMetrics
+## Amy Olex
+## Written to generate and summarize the results from the PICARD CalculateHSMetrics program.
+##
+## USAGE: ./run_CollectInsertSizeMetrics myconfig.config
+
+source $1
+
+## Define maxjobs function
+function maxjobs {
+        if [ $# -ne 1 ]
+        then
+                num=1
+        else
+                num=$1
+        fi
+
+        while [ `jobs -r | wc -l` -ge $num ]
+        do
+                sleep 2
+        done
+}
+
+## Parse the in file and run several jobs at once.
+cat $FILELIST | while read dir bam
+do
+	base=`basename $bam .bam`
+	tmp_out1=$OUTDIR"/"$base"_insert-size-metrics.txt"
+	tmp_out2=$OUTDIR"/"$base"_insert-size-histogram.pdf"
+	infile=$dir"/"$bam
+	
+	if [ -e $tmp_out1 ]
+	then
+		echo "File Exists, skipping..." $tmp_out1
+	else	
+		echo "Starting File..." $infile "...Out file is..." $tmp_out1
+		maxjobs $MAXJOBS
+		java -Xmx16g -XX:ParallelGCThreads=2 -Djava.io.tmpdir=./scratch -jar /opt/picard-tools-1.136/picard.jar CollectInsertSizeMetrics I=$infile O=$tmp_out1 H=$tmp_out2 VALIDATION_STRINGENCY=LENIENT &
+
+	fi
+done
+

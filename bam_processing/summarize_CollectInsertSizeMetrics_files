@@ -1,0 +1,23 @@
+#!/bin/bash
+
+## 9/27/16
+## Amy Olex
+## Summarizes the PICARD CollectInsertSizeMetrics files
+##
+## $infile should be a list of metrics files to summarize
+## OUT is the name of the output file
+
+infile=$1
+OUT=$2
+
+first_file=`head $infile -n 1`
+
+## Output the header line of the first file
+first_line=$(cat $first_file | sed -n '7p')
+echo FILE_NAME  $first_line > $OUT
+
+cat $infile | while read file
+do
+	values=$file"\t"$(cat $file | sed -n '8p')
+	echo -e $values >> $OUT
+done 

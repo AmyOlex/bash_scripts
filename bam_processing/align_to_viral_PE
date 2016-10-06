@@ -9,8 +9,8 @@
 ## INPUT: $2 is the number of jobs to process in parallel.
 ##
 ## UPDATE 9/27/16: I added a pipe so that the output is	a BAM file to a	specified directory instead of a SAM file in the working directory.
-##
-## To Run: Go to directory where you want the realigned files to be saved and run from there.  The input file $1 needs to have the relative path to the fastq files wrt the directory you run this script from.
+## UPDATE 10/5/16: I added the -X option to specify a really large fragment size.
+## To Run: Go to directory where the fastq files are, unless the input file $1 has the relative path to the fastq files wrt the directory you run this script from.
 ##
 ##USAGE: align_to_viral_PE <file_list> <outputdir> <maxjobs>
 
@@ -44,7 +44,7 @@ do
 	then
 		maxjobs $MAXJOBS
 		echo "MYSCRIPT: Started on `date`: "$base
-		bowtie2 -x /var/tcga/HNSC/RNAseq-aligned/refGenomes/selected_viral_sequences_all -1 $file1 -2 $file2 --end-to-end --threads 2 --very-sensitive --quiet | samtools view -bS - > $out &
+		bowtie2 -x /var/tcga/HNSC/RNAseq-aligned/refGenomes/selected_viral_sequences_all -1 $file1 -2 $file2 -X 2000 --end-to-end --threads 2 --very-sensitive --quiet | samtools view -bS - > $out &
 		echo "MY SCRIPT: PID for "$base" is "$!
 	else
 		echo "MYSCRIPT: File exists, skipping : $out"

@@ -10,13 +10,15 @@
 ##
 ## UPDATE 9/27/16: I added a pipe so that the output is	a BAM file to a	specified directory instead of a SAM file in the working directory.
 ## UPDATE 10/5/16: I added the -X option to specify a really large fragment size.
+## UPDATE 10/6/16: I added the ability to input the reference file in the command line instead of having it hard coded.
 ## To Run: Go to directory where the fastq files are, unless the input file $1 has the relative path to the fastq files wrt the directory you run this script from.
 ##
-##USAGE: align_to_viral_PE <file_list> <outputdir> <maxjobs>
+##USAGE: align_to_viral_PE <file_list> <outputdir> <ref genome> <maxjobs>
 
 FILELIST=$1
 OUTDIR=$2
-MAXJOBS=$3
+REF=$3
+MAXJOBS=$4
 
 
 ## Define maxjobs function
@@ -44,7 +46,7 @@ do
 	then
 		maxjobs $MAXJOBS
 		echo "MYSCRIPT: Started on `date`: "$base
-		bowtie2 -x /var/tcga/HNSC/RNAseq-aligned/refGenomes/selected_viral_sequences_all -1 $file1 -2 $file2 -X 2000 --end-to-end --threads 2 --very-sensitive --quiet | samtools view -bS - > $out &
+		bowtie2 -x $REF -1 $file1 -2 $file2 -X 2000 --end-to-end --threads 2 --very-sensitive --quiet | samtools view -bS - > $out &
 		echo "MY SCRIPT: PID for "$base" is "$!
 	else
 		echo "MYSCRIPT: File exists, skipping : $out"

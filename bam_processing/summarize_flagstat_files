@@ -3,13 +3,16 @@
 # 9/26/16
 # Short Script to summarize all the flagstat files into a tab delim text file
 # Must be run in the same directory as the flagstat files.
-# USAGE: >> ./summarize_flagstat_files my-flagstat-output.txt
-OUT=$1
+#
+# USAGE: >> ./summarize_flagstat_files file_list.txt summarized_output.txt
 
-`ls *flagstat.txt > flagstat-files-to-summarize.txt`
+IN=$1
+OUT=$2
+
 echo -e "Barcode\tTotal\tDuplicates\tMapped\tPaired in Sequencing\tRead1\tRead2\tProperly Paired\tItself and Mate Mapped\tSingletons\tMate Mapped to Dif Chr\tMate Mapped to Diff Chr (mapQ>=5)" > $OUT
-cat "flagstat-files-to-summarize.txt" | while read file
+cat $IN | while read file
 do
 	values=$(cat $file | awk -F' ' '{print $1}' | tr '\n' '\t')
-	echo -e $values >> $OUT
+	id=$(echo $file | egrep -o "TCGA[-_]..[-_]....[-_]...[-_]...[-_]....")
+	echo -e $id"  "$values >> $OUT
 done 

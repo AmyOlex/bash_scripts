@@ -1,0 +1,43 @@
+#!/bin/bash
+
+## Amy Olex
+## 7/18/17
+## Simple bash to index a list of BAM files
+## If not executed in the same folder as the BAM files, user must input the BAM file directory.
+## Index files will be saved in the same folder as the BAM files.
+##
+## Usage: >> ./run_samtoolsIndex <input.file> <directory> <maxjobs>
+
+INPUT=$1
+
+if ($# == 3)
+then
+	DIR=$2
+	JOBS=$3
+else
+	JOBS=$2
+	DIR="./"
+fi
+
+function maxjobs {
+	if [ $# -ne 1 ]
+	then
+		num=1
+	else
+		num=$1
+	fi
+
+	while [ `jobs -r | wc -l` -ge $num ]
+	do
+		sleep 5
+	done
+	
+}
+
+## Index all the bam files that have been recalibrated
+
+cat $INPUT | while read file
+do 
+	maxjobs $JOBS
+	samtools index $DIR/$file
+done

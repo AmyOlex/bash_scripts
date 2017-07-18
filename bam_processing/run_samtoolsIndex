@@ -39,5 +39,5 @@ function maxjobs {
 cat $INPUT | while read file
 do 
 	maxjobs $JOBS
-	samtools index $DIR/$file
+	samtools index $DIR/$file &
 done

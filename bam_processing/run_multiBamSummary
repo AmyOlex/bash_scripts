@@ -1,0 +1,50 @@
+#!/bin/bash
+
+## Amy Olex
+## 7/18/17
+## Simple bash to run bamCorrelate from DeepTools on a list of BAM files
+## If not executed in the same folder as the BAM files, user must input the BAM file directory.
+## Index files will be saved in the input output directory
+##
+## Usage: >> ./run_samtoolsIndex <input.file> <input.directory> <output.directory> <numthreads>
+
+INPUT=$1
+INDIR=$2
+OUTDIR=$3
+THREADS=$4
+
+function maxjobs {
+	if [ $# -ne 1 ]
+	then
+		num=1
+	else
+		num=$1
+	fi
+
+	while [ `jobs -r | wc -l` -ge $num ]
+	do
+		sleep 5
+	done
+	
+}
+
+## Run multiBamSummary on all BAM files
+
+cat $INPUT | while read file
+do 
+	base=`basename $file .bam`
+	multiBamSummary bins --bamfiles $file -out $OUTDIR/$base.npz --outRawCounts $OUTDIR/$base.raw.tab -p $THREADS
+done
+
+## Concatenate all the .tab files into one file
+
+touch tmp.tab
+
+ls $OUTDIR/*.tab | while read file
+do
+	paste tmp.tab $file > tmp2.tab
+	rm tmp.tab
+	mv tmp2.tab tmp.tab
+done
+
+mv tmp.tab $OUTDIR
